@@ -8,6 +8,9 @@
 
 #include "betterassert.h"
 
+#define BUFFER_SIZE 1024
+
+
 tfs_params tfs_default_params() {
     tfs_params params = {
         .max_inode_count = 64,
@@ -142,12 +145,17 @@ int tfs_sym_link(char const *target, char const *link_name) {
 }
 
 int tfs_link(char const *target, char const *link_name) {
-    (void)target;
-    (void)link_name;
-    // ^ this is a trick to keep the compiler from complaining about unused
-    // variables. TODO: remove
-
-    PANIC("TODO: tfs_link");
+    inode_t *root_dir_inode = inode_get(ROOT_DIR_INUM);
+    if(root_dir_inode == NULL){ return -1; }
+    
+    int i_number = tfs_lookup(target, root_dir_inode);
+    if(i_number == -1){ return -1; }
+    
+    if(add_dir_entry(root_dir_inode, link_name + 1, i_number) == -1){
+        return -1;
+    }
+    
+    
 }
 
 int tfs_close(int fhandle) {
@@ -242,10 +250,39 @@ int tfs_unlink(char const *target) {
 }
 
 int tfs_copy_from_external_fs(char const *source_path, char const *dest_path) {
-    (void)source_path;
-    (void)dest_path;
-    // ^ this is a trick to keep the compiler from complaining about unused
-    // variables. TODO: remove
+    FILE* fd_in = fopen(source_path, "r");
+    if(fd_in == NULL){
+        return -1;
+    }
+    
+    int fd_out = tfs_open(dest_path, TFS_O_CREAT);
+    if(fd_out == -1){
+        fclose(fd_in);
+        return -1;
+    }
+    
+    char* buffer = (char*)malloc(sizeof(char) * BUFFER_SIZE);
+    memset(buffer, 0, sizeof(char));
+    
+    ssize_t bytes_written;
+    size_t bytes_read;
 
-    PANIC("TODO: tfs_copy_from_external_fs");
+    do{
+        bytes_read = fread(buffer, sizeof(char), BUFFER_SIZE, fd_in);
+        if(ferror(fd_in)){
+            fclose(fd_in);
+            tfs_close(fd_out);
+            return -1;
+        }
+        
+
+        bytes_written = tfs_write(fd_out, buffer, bytes_read);
+        if(bytes_written < bytes_read){
+            return -1;
+        }
+    } while(bytes_read >= BUFFER_SIZE);
+
+    fclose(fd_in);
+    tfs_close(fd_out);
+    return 0;
 }

@@ -239,7 +239,7 @@ int inode_create(inode_type i_type) {
     default:
         PANIC("inode_create: unknown file type");
     }
-
+    inode_table[inumber].i_counter = 0;
     return inumber;
 }
 
