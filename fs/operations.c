@@ -5,6 +5,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <pthread.h>
 
 #include "betterassert.h"
 
@@ -92,8 +93,11 @@ int tfs_open(char const *name, tfs_file_mode_t mode) {
         // The file already exists
         inode_t *inode = inode_get(inum);
         ALWAYS_ASSERT(inode != NULL,
-                      "tfs_open: directory files must have an inode");
+                    "tfs_open: directory files must have an inode");
 
+        if (inode->i_node_type == T_SOFTLINK){
+            return tfs_open(data_block_get(inode->i_data_block), mode);
+        }
         // Truncate (if requested)
         if (mode & TFS_O_TRUNC) {
             if (inode->i_size > 0) {
@@ -139,12 +143,12 @@ int tfs_sym_link(char const *target, char const *link_name) {
     inode_t *root_dir_inode = inode_get(ROOT_DIR_INUM);
     if(root_dir_inode == NULL){ return -1; }
 
-    int new_inode = inode_create(T_SOFTLINK);
+    int new_inumber = inode_create(T_SOFTLINK);
 
-    void *data_block_pointer = data_block_get(root_dir_inode[new_inode].i_data_block);
+    void *data_block_pointer = data_block_get(root_dir_inode[new_inumber].i_data_block);
     memcpy(data_block_pointer, target, strlen(target));
     
-    if(add_dir_entry(root_dir_inode, link_name + 1, new_inode) == -1){
+    if(add_dir_entry(root_dir_inode, link_name + 1, new_inumber) == -1){
         return -1;
     }
 
@@ -253,11 +257,25 @@ ssize_t tfs_read(int fhandle, void *buffer, size_t len) {
 }
 
 int tfs_unlink(char const *target) {
-    (void)target;
-    // ^ this is a trick to keep the compiler from complaining about unused
-    // variables. TODO: remove
+    inode_t *root_dir_inode = inode_get(ROOT_DIR_INUM);
+    if(root_dir_inode == NULL){ return -1; }
 
-    PANIC("TODO: tfs_unlink");
+    int inumber = tfs_lookup(target, root_dir_inode);
+    inode_t *inode = inode_get(inumber);
+    inode_type type = inode->i_node_type;
+
+
+    if (type == T_FILE){
+        inode->i_counter--;
+        if (inode->i_counter == 0){
+            inode_delete(inumber);
+        }
+    }
+    if (type == T_SOFTLINK){
+        data_block_free(inode->i_data_block);
+        inode_delete(inumber);
+    }
+    return clear_dir_entry(root_dir_inode, target + 1);
 }
 
 int tfs_copy_from_external_fs(char const *source_path, char const *dest_path) {
@@ -283,17 +301,20 @@ int tfs_copy_from_external_fs(char const *source_path, char const *dest_path) {
         if(ferror(fd_in)){
             fclose(fd_in);
             tfs_close(fd_out);
+            free(buffer);
             return -1;
         }
         
 
         bytes_written = tfs_write(fd_out, buffer, bytes_read);
         if(bytes_written < bytes_read){
+            free(buffer);
             return -1;
         }
     } while(bytes_read >= BUFFER_SIZE);
 
     fclose(fd_in);
     tfs_close(fd_out);
+    free(buffer);
     return 0;
 }
