@@ -53,7 +53,6 @@ void* tfs_close_thread(void* args){ //args = ponteiro void para o array de ponte
 
 int main()
 {
-    printf("entrei no main\n");
     assert(tfs_init(NULL) != -1);
     
     
@@ -69,19 +68,16 @@ int main()
 
     //srand ( time(NULL) );    int randomIndex
 
-    printf("1\n");
     char source_file_name[] = "tests/f0.txt";
     char new_file_name[] = "/f1";
     int new_file_fhandle;
     char buffer[1024];
     memset(buffer, 0, sizeof(buffer));
     if (tfs_copy_from_external_fs(source_file_name, new_file_name) == -1){
-        printf("falhaste meu puto\n");
         return -1;
     }
     new_file_fhandle = tfs_open(new_file_name, TFS_O_CREAT);
     //printf("New File Content: %s\n", buffer);
-    printf("2\n");
 
     size_t len2 = 20;
     //int new_file_fhandle1;
@@ -91,7 +87,6 @@ int main()
     tfs_read_thread(cenas1);
     printf("New File Content: %s\n", buffer);
     */
-   printf("3\n");
     //srand ( time(NULL) );
     //int myArray[3] = { 1,2,3};
     //int randomIndex = rand() % 3;
@@ -100,10 +95,8 @@ int main()
     
     pthread_t thread_id;
 
-    printf("antes do for");
     tfs_read_thread(cenas1);
     for(int i = 0; i < 15; i++){ 
-        printf("4\n");
         //printf("i: %d\n", i);
         switch(i%3){
             case 5: 
