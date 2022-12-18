@@ -8,6 +8,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
+#include <pthread.h>
 
 /**
  * Directory entry
@@ -15,6 +16,7 @@
 typedef struct {
     char d_name[MAX_FILE_NAME];
     int d_inumber;
+    pthread_rwlock_t dir_lock;
 } dir_entry_t;
 
 typedef enum { T_FILE, T_DIRECTORY, T_SOFTLINK } inode_type;
@@ -27,7 +29,7 @@ typedef struct {
     int i_counter;
     size_t i_size;
     int i_data_block;
-
+    pthread_rwlock_t i_node_lock;
     // in a more complete FS, more fields could exist here
 } inode_t;
 
@@ -39,8 +41,10 @@ typedef enum { FREE = 0, TAKEN = 1 } allocation_state_t;
 typedef struct {
     int of_inumber;
     size_t of_offset;
+    pthread_rwlock_t open_file_lock;
 } open_file_entry_t;
 
+int init_locks();
 int state_init(tfs_params);
 int state_destroy(void);
 
@@ -61,5 +65,17 @@ void *data_block_get(int block_number);
 int add_to_open_file_table(int inumber, size_t offset);
 void remove_from_open_file_table(int fhandle);
 open_file_entry_t *get_open_file_entry(int fhandle);
+open_file_entry_t *get_open_file_table();
+
+int lock_inode_read(inode_t *inode);
+int lock_inode_write(inode_t *inode);
+int unlock_inode(inode_t *inode);
+int lock_dir_read(dir_entry_t *dir);
+int lock_dir_write(dir_entry_t *dir);
+int unlock_dir(dir_entry_t *dir);
+int lock_open_file_read(open_file_entry_t *open_file);
+int lock_open_file_write(open_file_entry_t *open_file);
+int unlock_open_file(open_file_entry_t *open_file);
+
 
 #endif // STATE_H

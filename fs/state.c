@@ -6,6 +6,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
+#include <pthread.h>
 
 /*
  * Persistent FS state
@@ -27,6 +28,7 @@ static allocation_state_t *free_blocks;
  */
 static open_file_entry_t *open_file_table;
 static allocation_state_t *free_open_file_entries;
+
 
 // Convenience macros
 #define INODE_TABLE_SIZE (fs_params.max_inode_count)
@@ -79,6 +81,7 @@ static void insert_delay(void) {
         touch_all_memory();
     }
 }
+
 
 /**
  * Initialize FS state.
@@ -205,6 +208,7 @@ int inode_create(inode_type i_type) {
     insert_delay(); // simulate storage access delay (to inode)
 
     inode->i_node_type = i_type;
+    pthread_rwlock_init(&inode_table[inumber].i_node_lock, NULL);
     switch (i_type) {
     case T_DIRECTORY: {
         // Initializes directory (filling its block with empty entries, labeled
@@ -230,6 +234,7 @@ int inode_create(inode_type i_type) {
         for (size_t i = 0; i < MAX_DIR_ENTRIES; i++) {
             dir_entry[i].d_inumber = -1;
         }
+        pthread_rwlock_init(&dir_entry->dir_lock, NULL);
     } break;
     case T_FILE:
         // In case of a new file, simply sets its size to 0
@@ -280,7 +285,6 @@ void inode_delete(int inumber) {
  */
 inode_t *inode_get(int inumber) {
     ALWAYS_ASSERT(valid_inumber(inumber), "inode_get: invalid inumber");
-
     insert_delay(); // simulate storage access delay to inode
     return &inode_table[inumber];
 }
@@ -518,4 +522,52 @@ open_file_entry_t *get_open_file_entry(int fhandle) {
     }
 
     return &open_file_table[fhandle];
+}
+
+open_file_entry_t *get_open_file_table(){
+    return open_file_table;
+}
+
+/**
+ * Lock or unlock each lock
+ *
+ * Returns 0 if successfull, -1 otherwise.
+ *
+ * Possible errors:
+ *   - Unable to lock or unlock.
+ */
+int lock_inode_read(inode_t *inode){
+    return pthread_rwlock_rdlock(&inode->i_node_lock);
+}
+
+int lock_inode_write(inode_t *inode){
+    return pthread_rwlock_wrlock(&inode->i_node_lock);
+}
+
+int unlock_inode(inode_t *inode){
+    return pthread_rwlock_unlock(&inode->i_node_lock);
+}
+
+int lock_dir_read(dir_entry_t *dir){
+    return pthread_rwlock_wrlock(&dir->dir_lock);
+}
+
+int lock_dir_write(dir_entry_t *dir){
+    return pthread_rwlock_wrlock(&dir->dir_lock);
+}
+
+int unlock_dir(dir_entry_t *dir){
+    return pthread_rwlock_unlock(&dir->dir_lock);
+}
+
+int lock_open_file_read(open_file_entry_t *open_file){
+    return pthread_rwlock_wrlock(&open_file->open_file_lock);
+}
+
+int lock_open_file_write(open_file_entry_t *open_file){
+    return pthread_rwlock_wrlock(&open_file->open_file_lock);
+}
+
+int unlock_open_file(open_file_entry_t *open_file){
+    return pthread_rwlock_unlock(&open_file->open_file_lock);
 }
