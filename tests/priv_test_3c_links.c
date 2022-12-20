@@ -5,21 +5,30 @@
 #include <pthread.h>
 #include <unistd.h>
 
-#define THREAD_COUNT 23
-
+#define THREAD_COUNT 10
+#define BLOCK_SIZE 3000
 
 char const str[] = "content\n";
-char buffer[sizeof(str) * THREAD_COUNT];
+char buffer[sizeof(str)];
 
+char const target_path1[] = "/original";
+char const link_path1[] = "/hardlink";
+char const link_path2[] = "/softlink";
 
 void* thread_test() {
-    int f = tfs_open("/target1", TFS_O_APPEND);
+    int f = tfs_open(target_path1, TFS_O_CREAT);
     assert(f != -1);
-    
-    ssize_t w = tfs_write(f, str, strlen(str));
-    assert(w != -1);
+
+    assert(tfs_write(f, str, strlen(str)) != -1);
 
     assert(tfs_close(f) != -1);
+
+    assert(tfs_link(target_path1, link_path1) != -1);
+
+    assert(tfs_unlink(target_path1) != -1);
+
+    assert(tfs_sym_link(link_path1, link_path2) != -1);
+
     return NULL;
 }
 
@@ -27,6 +36,7 @@ void* thread_test() {
 int main() {
     pthread_t tid[THREAD_COUNT];
     tfs_params params = tfs_default_params();
+    params.block_size = BLOCK_SIZE;
     
     assert(tfs_init(&params) != -1);
 
@@ -47,14 +57,19 @@ int main() {
         }
     }
 
-    f = tfs_open("/target1", 0);
-    assert(f != -1);
+    int f1 = tfs_open(link_path1, 0);
+    assert(f1 != -1);
     
-    ssize_t r = tfs_read(f, buffer, sizeof(buffer));
-    assert( r == strlen(str) * THREAD_COUNT );
+    int f2 = tfs_open(link_path2, 0);
+    assert(f2 != -1);
 
-    assert(tfs_close(f) != -1);
+    ssize_t r1 = tfs_read(f1, buffer, sizeof(buffer));
+    ssize_t r2 = tfs_read(f2, buffer, sizeof(buffer));
+    assert( r1 == r2 );
+
+    assert(tfs_close(f1) != -1);
+    assert(tfs_close(f2) != -1);
 
     printf("\033[1m\033[92mSuccessful test.\033[0m\n");
     return 0;
-}
+}    

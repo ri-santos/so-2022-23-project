@@ -36,5 +36,5 @@ int main() {
     // Link usable again - target was recreated
     assert(tfs_open(link_path, TFS_O_APPEND) != -1);
 
-    printf("Successful test.\n");
+    printf("\033[1m\033[92mSuccessful test.\033[0m\n");
 }

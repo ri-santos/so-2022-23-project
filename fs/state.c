@@ -29,6 +29,7 @@ pthread_rwlock_t datablocklock;
  */
 static open_file_entry_t *open_file_table;
 static allocation_state_t *free_open_file_entries;
+pthread_rwlock_t open_file_table_lock;
 
 
 // Convenience macros
@@ -102,7 +103,8 @@ int state_init(tfs_params params) {
     if (inode_table != NULL) {
         return -1; // already initialized
     }
-    pthread_rwlock_init(&datablocklock, NULL);
+    if(pthread_rwlock_init(&datablocklock, NULL) != 0) { return -1; }
+    if(pthread_rwlock_init(&open_file_table_lock, NULL) != 0) { return -1; }
     inode_table = malloc(INODE_TABLE_SIZE * sizeof(inode_t));
     freeinode_ts = malloc(INODE_TABLE_SIZE * sizeof(allocation_state_t));
     fs_data = malloc(DATA_BLOCKS * BLOCK_SIZE);
@@ -209,7 +211,7 @@ int inode_create(inode_type i_type) {
     insert_delay(); // simulate storage access delay (to inode)
 
     inode->i_node_type = i_type;
-    pthread_rwlock_init(&inode_table[inumber].i_node_lock, NULL);
+    if(pthread_rwlock_init(&inode_table[inumber].i_node_lock, NULL) != 0) { return -1; }
     switch (i_type) {
     case T_DIRECTORY: {
         // Initializes directory (filling its block with empty entries, labeled
@@ -235,7 +237,7 @@ int inode_create(inode_type i_type) {
         for (size_t i = 0; i < MAX_DIR_ENTRIES; i++) {
             dir_entry[i].d_inumber = -1;
         }
-        pthread_rwlock_init(&dir_entry->dir_lock, NULL);
+        if(pthread_rwlock_init(&dir_entry->dir_lock, NULL) != 0) { return -1; }
     } break;
     case T_FILE:
         // In case of a new file, simply sets its size to 0
@@ -341,20 +343,22 @@ int clear_dir_entry(inode_t *inode, char const *sub_name) {
  */
 int add_dir_entry(inode_t *inode, char const *sub_name, int sub_inumber) {
     if (strlen(sub_name) == 0 || strlen(sub_name) > MAX_FILE_NAME - 1) {
+        printf("subname\n");
         return -1; // invalid sub_name
     }
 
     insert_delay(); // simulate storage access delay to inode with inumber
     if (inode->i_node_type != T_DIRECTORY) {
+        printf("not a directory\n");
         return -1; // not a directory
     }
 
     // Locates the block containing the entries of the directory
-    lock_datablock_write();
+    if(lock_datablock_write() != 0) { return -1; } 
     dir_entry_t *dir_entry = (dir_entry_t *)data_block_get(inode->i_data_block);
     ALWAYS_ASSERT(dir_entry != NULL,
                   "add_dir_entry: directory must have a data block");
-    unlock_datablock();
+    if(unlock_datablock() != 0) { return -1; }
     // Finds and fills the first empty entry
     for (size_t i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (dir_entry[i].d_inumber == -1) {
@@ -365,6 +369,7 @@ int add_dir_entry(inode_t *inode, char const *sub_name, int sub_inumber) {
             return 0;
         }
     }
+    printf("no space\n");
     return -1; // no space for entry
 }
 
@@ -522,9 +527,6 @@ open_file_entry_t *get_open_file_entry(int fhandle) {
     return &open_file_table[fhandle];
 }
 
-open_file_entry_t *get_open_file_table(){
-    return open_file_table;
-}
 
 /**
  * Lock or unlock each lock
@@ -558,16 +560,16 @@ int unlock_dir(dir_entry_t *dir){
     return pthread_rwlock_unlock(&dir->dir_lock);
 }
 
-int lock_open_file_read(open_file_entry_t *open_file){
-    return pthread_rwlock_wrlock(&open_file->open_file_lock);
+int lock_open_file_read(){
+    return pthread_rwlock_wrlock(&open_file_table_lock);
 }
 
-int lock_open_file_write(open_file_entry_t *open_file){
-    return pthread_rwlock_wrlock(&open_file->open_file_lock);
+int lock_open_file_write(){
+    return pthread_rwlock_wrlock(&open_file_table_lock);
 }
 
-int unlock_open_file(open_file_entry_t *open_file){
-    return pthread_rwlock_unlock(&open_file->open_file_lock);
+int unlock_open_file(){
+    return pthread_rwlock_unlock(&open_file_table_lock);
 }
 
 int lock_datablock_read(){

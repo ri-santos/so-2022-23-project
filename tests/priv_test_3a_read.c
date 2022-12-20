@@ -50,7 +50,7 @@ int main() {
         }
     }
 
-    printf("Successful test.\n");
+    printf("\033[1m\033[92mSuccessful test.\033[0m\n");
     return 0;
 }
 

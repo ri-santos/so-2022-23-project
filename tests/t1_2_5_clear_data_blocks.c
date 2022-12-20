@@ -91,7 +91,7 @@ int main() {
     // destroy TécnicoFS
     assert(tfs_destroy() != -1);
 
-    printf("Successful test.\n");
+    printf("\033[1m\033[92mSuccessful test.\033[0m\n");
 
     return 0;
 }

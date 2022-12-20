@@ -140,13 +140,10 @@ int main(int argc, char* const argv[])
     //printf("DONE4\n");
     char buffer3[1025];
     memset(buffer3,0,sizeof(buffer3));
-    printf("read depois: %ld\n",tfs_read(file_fhandle, buffer3, sizeof(buffer3)));
-    //printf("DONE5\n");
-    printf("buffer: %s\n", buffer3);
     //printf("DONE6\n");
     tfs_close(file_fhandle);
     //printf("DONE7\n");
-    printf("Successful test.\n");
+    printf("\033[1m\033[92mSuccessful test.\033[0m\n");
 
     return 0;
 }
