@@ -22,6 +22,7 @@ static allocation_state_t *freeinode_ts;
 // Data blocks
 static char *fs_data; // # blocks * block size
 static allocation_state_t *free_blocks;
+pthread_rwlock_t datablocklock;
 
 /*
  * Volatile FS state
@@ -101,7 +102,7 @@ int state_init(tfs_params params) {
     if (inode_table != NULL) {
         return -1; // already initialized
     }
-
+    pthread_rwlock_init(&datablocklock, NULL);
     inode_table = malloc(INODE_TABLE_SIZE * sizeof(inode_t));
     freeinode_ts = malloc(INODE_TABLE_SIZE * sizeof(allocation_state_t));
     fs_data = malloc(DATA_BLOCKS * BLOCK_SIZE);
@@ -349,10 +350,11 @@ int add_dir_entry(inode_t *inode, char const *sub_name, int sub_inumber) {
     }
 
     // Locates the block containing the entries of the directory
+    lock_datablock_write();
     dir_entry_t *dir_entry = (dir_entry_t *)data_block_get(inode->i_data_block);
     ALWAYS_ASSERT(dir_entry != NULL,
                   "add_dir_entry: directory must have a data block");
-
+    unlock_datablock();
     // Finds and fills the first empty entry
     for (size_t i = 0; i < MAX_DIR_ENTRIES; i++) {
         if (dir_entry[i].d_inumber == -1) {
@@ -363,7 +365,6 @@ int add_dir_entry(inode_t *inode, char const *sub_name, int sub_inumber) {
             return 0;
         }
     }
-
     return -1; // no space for entry
 }
 
@@ -403,7 +404,6 @@ int find_in_dir(inode_t const *inode, char const *sub_name) {
             int sub_inumber = dir_entry[i].d_inumber;
             return sub_inumber;
         }
-
     return -1; // entry not found
 }
 
@@ -479,11 +479,9 @@ int add_to_open_file_table(int inumber, size_t offset) {
             free_open_file_entries[i] = TAKEN;
             open_file_table[i].of_inumber = inumber;
             open_file_table[i].of_offset = offset;
-
             return i;
         }
     }
-
     return -1;
 }
 
@@ -570,4 +568,14 @@ int lock_open_file_write(open_file_entry_t *open_file){
 
 int unlock_open_file(open_file_entry_t *open_file){
     return pthread_rwlock_unlock(&open_file->open_file_lock);
+}
+
+int lock_datablock_read(){
+    return pthread_rwlock_rdlock(&datablocklock);
+}
+int lock_datablock_write(){
+    return pthread_rwlock_wrlock(&datablocklock);
+}
+int unlock_datablock(){
+    return pthread_rwlock_unlock(&datablocklock);
 }

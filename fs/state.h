@@ -76,6 +76,9 @@ int unlock_dir(dir_entry_t *dir);
 int lock_open_file_read(open_file_entry_t *open_file);
 int lock_open_file_write(open_file_entry_t *open_file);
 int unlock_open_file(open_file_entry_t *open_file);
+int lock_datablock_read();
+int lock_datablock_write();
+int unlock_datablock();
 
 
 #endif // STATE_H
