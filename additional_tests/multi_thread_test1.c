@@ -5,6 +5,10 @@
 #include <pthread.h>
 
 
+#define THREAD_COUNT 100
+#define MAX_OPEN_FILES 1000
+
+
 void *test(){
     char *str_ext_file = "BBB!";
     char *path_copied_file = "/f1";
@@ -41,8 +45,8 @@ void *test(){
 
 int main(){
     tfs_params params = tfs_default_params();
-    params.max_open_files_count = 1000;
-    pthread_t thread[100];
+    params.max_open_files_count = MAX_OPEN_FILES;
+    pthread_t thread[THREAD_COUNT];
     assert(tfs_init(&params) != -1);
 
     for (int i = 0; i < 100; i++){
