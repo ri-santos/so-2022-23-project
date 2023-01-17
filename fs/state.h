@@ -41,7 +41,6 @@ typedef enum { FREE = 0, TAKEN = 1 } allocation_state_t;
 typedef struct {
     int of_inumber;
     size_t of_offset;
-    pthread_rwlock_t open_file_lock;
 } open_file_entry_t;
 
 int init_locks();

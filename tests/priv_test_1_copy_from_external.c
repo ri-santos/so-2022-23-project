@@ -5,7 +5,9 @@
 #include <pthread.h>
 #include <unistd.h>
 
-
+/*
+    Tries to copy a file with a size bigger than the supported one.
+*/
 int main(){
     char *str_ext_file = 
     "contentcontentcontentcontentcontentcontentcontentcontentcontent    contentcontentcontentcontentcontentcontentcontent contentcontentcontentcontentcontentcontentcontentcontentcontent    contentcontentcontentcontentcontentcontentcontent contentcontentcontentcontentcontentcontent   contentcontentcontentcontent"

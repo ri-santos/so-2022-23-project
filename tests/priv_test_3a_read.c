@@ -6,6 +6,11 @@
 
 #define THREAD_COUNT 23
 
+/*
+    Creates multiple threads that try to read the content of a file and checks if each thread read the
+    expected content.
+*/
+
 
 char const file_content[] = "content";
 char buffer[sizeof(file_content)];

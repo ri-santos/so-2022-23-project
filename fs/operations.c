@@ -197,7 +197,6 @@ int tfs_link(char const *target, char const *link_name) {
     
     if(lock_dir_read(dir) != 0){ return -1; }
     int i_number = tfs_lookup(target, root_dir_inode);
-    if(i_number == -1) { return -1; }
     if(unlock_dir(dir) != 0){ return -1; }
     if(i_number == -1){ return -1; }
 

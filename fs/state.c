@@ -354,7 +354,7 @@ int add_dir_entry(inode_t *inode, char const *sub_name, int sub_inumber) {
     }
 
     // Locates the block containing the entries of the directory
-    if(lock_datablock_write() != 0) { return -1; } 
+    if(lock_datablock_read() != 0) { return -1; } 
     dir_entry_t *dir_entry = (dir_entry_t *)data_block_get(inode->i_data_block);
     ALWAYS_ASSERT(dir_entry != NULL,
                   "add_dir_entry: directory must have a data block");
@@ -526,6 +526,10 @@ open_file_entry_t *get_open_file_entry(int fhandle) {
 
     return &open_file_table[fhandle];
 }
+
+open_file_entry_t *get_open_file_table(){
+    return open_file_table;
+} 
 
 
 /**

@@ -6,6 +6,12 @@
 #include <unistd.h>
 
 
+/*
+    Creates two hard links to the same inode, then a soft link to the first hard link, unlinks the first hard link
+    and checks if the content is still obtainable through the soft link (shouldn't be ).
+*/
+
+
 char const file_content[] = "content";
 char const target_path1[] = "/f1";
 char const link_path1[] = "/l1";

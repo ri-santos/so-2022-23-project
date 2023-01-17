@@ -8,6 +8,11 @@
 #define THREAD_COUNT 23
 
 
+/*
+    Creates multiple threads that try to write the same content in a file and checks if the final content
+    is according to the expected.
+*/
+
 char const str[] = "content\n";
 char buffer[sizeof(str) * THREAD_COUNT];
 

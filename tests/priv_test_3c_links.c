@@ -8,6 +8,12 @@
 #define THREAD_COUNT 10
 #define BLOCK_SIZE 3000
 
+/*
+    Creates multiple threads that write in a file, create a hard link to that inode, then delete the initial hard link 
+    and finally create a soft link to the second hard link and checks if the content is obtainable through the soft link.
+*/
+
+
 char const str[] = "content\n";
 char buffer[sizeof(str)];
 
@@ -21,9 +27,9 @@ void* thread_test() {
 
     assert(tfs_write(f, str, strlen(str)) != -1);
 
-    assert(tfs_close(f) != -1);
-
     assert(tfs_link(target_path1, link_path1) != -1);
+
+    assert(tfs_close(f) != -1);
 
     assert(tfs_unlink(target_path1) != -1);
 
